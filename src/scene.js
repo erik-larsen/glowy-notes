@@ -48,7 +48,8 @@ export class Stage {
     this.rig.attachControls(canvas);
 
     this.scene.add(new THREE.HemisphereLight(0x9aa0b0, 0x000000, 0.12));
-    this.spot = new THREE.SpotLight(0xfff1e0, 1.4, 0, 0.6, 1, 0);
+    // Cone angle sized so the lit circle on the paper is 25% wider than the original 0.6 rad cone.
+    this.spot = new THREE.SpotLight(0xfff1e0, 1.4, 0, Math.atan(1.25 * Math.tan(0.6)), 1, 0);
     this.spot.castShadow = false;
     this.scene.add(this.spot, this.spot.target);
 

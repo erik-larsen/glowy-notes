@@ -23,7 +23,7 @@ const LINGER_MS = 400; // stay on a phrase's last note at least this long
 const PHRASE_REST_MS = 3000; // silence that ends a phrase
 const SQUASH_MS = 90;
 
-const easeOut = (u) => 1 - (1 - u) ** 3;
+const smoothstep = (u) => u * u * (3 - 2 * u);
 const easeIn = (u) => u ** 3;
 
 export class Balls {
@@ -140,18 +140,21 @@ export class Balls {
       let squash = 0;
 
       if (t < first.t) {
+        // Keep moving the whole way: glide across while falling faster and faster, so the
+        // ball lands on the first note with some speed exactly as it sounds (no hovering).
         const u = Math.min(1, Math.max(0, (t - phrase.enterAt) / (first.t - phrase.enterAt)));
-        const e = easeOut(u);
+        const glide = smoothstep(u);
+        const fall = 1 - u * u;
         if (phrase.fromPreroll) {
-          // Glide in from off screen to the left while the playhead waits at the start.
-          x = first.x + FLY_FROM.x * u2 * (1 - e);
-          y = r + FLY_FROM.y * u2 * (1 - e);
-          z = first.z + FLY_FROM.z * u2 * (1 - e);
+          // In from off screen to the left while the playhead waits at the start.
+          x = first.x + FLY_FROM.x * u2 * (1 - glide);
+          y = r + FLY_FROM.y * u2 * fall;
+          z = first.z + FLY_FROM.z * u2 * (1 - glide);
         } else {
-          // Swoop down level with the other balls, settling onto the first note.
-          x = this.playheadX(t) + first.dx * e;
-          y = r + SWOOP.y * u2 * (1 - e);
-          z = first.z + SWOOP.z * u2 * (1 - e);
+          // Swoop down level with the other balls onto the first note.
+          x = this.playheadX(t) + first.dx * glide;
+          y = r + SWOOP.y * u2 * fall;
+          z = first.z + SWOOP.z * u2 * (1 - glide);
         }
       } else {
         const i = Math.min(lastLandingAtOrBefore(l, t), phrase.last);
