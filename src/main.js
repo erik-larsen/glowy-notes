@@ -62,7 +62,7 @@ async function findRecording(id) {
     const res = await fetch(`/media/${id}.align.json`);
     if (!res.ok || !res.headers.get('content-type')?.includes('json')) return null;
     const align = await res.json();
-    return { url: `/media/${align.audio}`, warp: createWarp(align.points) };
+    return { url: `/media/${align.audio}`, warp: createWarp(align.points), label: align.label ?? 'Recording' };
   } catch {
     return null;
   }
@@ -80,7 +80,8 @@ async function loadScore(data, name, recording = null) {
     await audioReady;
     current = { score, recording };
     ui.sound.hidden = !recording;
-    showMessage(recording ? 'Loading recording…' : '');
+    if (recording) ui.sound.options[0].textContent = recording.label;
+    showMessage(recording ? `Loading ${recording.label}…` : '');
     await loadAudio();
     ui.play.disabled = ui.scrub.disabled = false;
     showMessage('');

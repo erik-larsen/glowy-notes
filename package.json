@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "score": "node scripts/make-test-score.mjs",
-    "align:canon": "node scripts/export-score-notes.mjs public/scores/canon-in-d.musicxml .venv/canon-notes.json && .venv/bin/python -W ignore scripts/align.py .venv/canon-notes.json public/media/canon-in-d.m4a public/media/canon-in-d.align.json"
+    "align:canon": "node scripts/export-score-notes.mjs public/scores/canon-in-d.musicxml .venv/canon-notes.json && .venv/bin/python -W ignore scripts/align.py .venv/canon-notes.json public/media/canon-in-d.m4a public/media/canon-in-d.align.json",
+    "render": "node scripts/render.mjs"
   },
   "dependencies": {
     "@tonejs/midi": "^2.0.28",
