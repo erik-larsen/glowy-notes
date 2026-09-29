@@ -21,15 +21,19 @@ export async function layoutScore(svgText, host, maxTileWidth) {
   root.setAttribute('height', `${height}px`);
   const svg = new XMLSerializer().serializeToString(root);
 
-  const [notes, tiles] = await Promise.all([
-    measureNotes(svg, host, width, height),
+  const [{ notes, staffCenters }, tiles] = await Promise.all([
+    measure(svg, host, width, height),
     rasterize(svg, width, height, maxTileWidth),
   ]);
-  return { width, height, notes, tiles };
+  return { width, height, notes, staffCenters, tiles };
 }
 
-/** Returns Map<noteId, {x, y, w, h, staff, layer}> in raster pixels (notehead centre + size). */
-function measureNotes(svg, host, width, height) {
+/**
+ * Returns, in raster pixels:
+ *   notes: Map<noteId, {x, y, w, h, staff, layer}> (notehead centre + size)
+ *   staffCenters: vertical centre of each staff's five lines, in staff order
+ */
+function measure(svg, host, width, height) {
   host.innerHTML = svg;
   const root = host.querySelector('svg');
   const origin = root.getBoundingClientRect();
@@ -49,8 +53,23 @@ function measureNotes(svg, host, width, height) {
       layer: parseInt(el.closest('g.layer')?.dataset.n ?? '1', 10),
     });
   }
+  // Staff lines are the <path> children of each g.staff; take their extent per staff number.
+  const extents = new Map();
+  for (const staff of root.querySelectorAll('g.staff')) {
+    const n = parseInt(staff.dataset.n ?? '1', 10);
+    for (const line of staff.querySelectorAll(':scope > path')) {
+      const r = line.getBoundingClientRect();
+      const e = extents.get(n) ?? { top: Infinity, bottom: -Infinity };
+      e.top = Math.min(e.top, r.top);
+      e.bottom = Math.max(e.bottom, r.bottom);
+      extents.set(n, e);
+    }
+  }
+  const staffCenters = [...extents.entries()]
+    .sort(([a], [b]) => a - b)
+    .map(([, e]) => ((e.top + e.bottom) / 2 - origin.top) * sy);
   host.innerHTML = '';
-  return notes;
+  return { notes, staffCenters };
 }
 
 /** Draws the SVG into canvases no wider than maxTileWidth: [{canvas, x, width}]. */

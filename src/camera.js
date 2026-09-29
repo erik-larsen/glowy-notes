@@ -65,7 +65,7 @@ export class CameraRig {
 
   /**
    * @param {{t: number, x: number}[]} keyframes playhead x (world) at score times (ms), sorted by t
-   * @param {number} zCenter world z the camera should centre on
+   * @param {number} zCenter world z the camera centres on and orbits around (between the staves)
    * @param {number} scale overall framing scale (world height of the system)
    */
   setPath(keyframes, zCenter, scale) {
@@ -109,8 +109,8 @@ export class CameraRig {
     ).multiplyScalar(s);
 
     // Low and to the left of the playhead, looking along the staff into the dark.
-    const lookAt = new THREE.Vector3(this.focusX + 0.45 * s, 0, this.zCenter - 0.2 * s);
-    const position = new THREE.Vector3(this.focusX - 0.95 * s, 0.62 * s, this.zCenter + 1.0 * s).add(drift);
+    const lookAt = new THREE.Vector3(this.focusX + 0.45 * s, 0, this.zCenter);
+    const position = new THREE.Vector3(this.focusX - 0.95 * s, 0.62 * s, this.zCenter + 1.2 * s).add(drift);
 
     // Apply the viewer's orbit and zoom around the look-at point.
     const k = 1 - Math.exp(-dt * VIEW_DAMPING);

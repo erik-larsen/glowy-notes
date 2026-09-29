@@ -157,7 +157,11 @@ export class Stage {
     }
     if (!keyframes.length) keyframes.push({ t: 0, x: 0 });
     keyframes.push({ t: score.durationMs + 1500, x: Math.min(worldW, lastX + worldH * 0.3) });
-    const zCenter = notes.length ? notes.reduce((s, n) => s + n.z, 0) / notes.length : 0;
+    // Centre the view (and the orbit/zoom pivot) halfway between the top and bottom staves.
+    const staves = layout.staffCenters;
+    const zCenter = staves.length
+      ? toZ((staves[0] + staves[staves.length - 1]) / 2)
+      : notes.reduce((sum, n) => sum + n.z, 0) / Math.max(1, notes.length);
     this.rig.setPath(keyframes, zCenter, worldH);
     this.worldH = worldH;
   }
