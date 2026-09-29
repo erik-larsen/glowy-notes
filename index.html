@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Glowy Notes</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="stage"></canvas>
+    <div id="measure-host" aria-hidden="true"></div>
+
+    <div id="overlay" class="visible">
+      <div id="overlay-text">Loading engraver…</div>
+    </div>
+
+    <div id="hud">
+      <button id="play" disabled aria-label="Play">
+        <svg viewBox="0 0 24 24" class="icon-play"><path d="M7 4.5v15l13-7.5z" /></svg>
+        <svg viewBox="0 0 24 24" class="icon-pause"><path d="M6 4h4.5v16H6zM13.5 4H18v16h-4.5z" /></svg>
+      </button>
+      <span id="time">0:00</span>
+      <input id="scrub" type="range" min="0" max="1" step="0.001" value="0" disabled aria-label="Seek" />
+      <span id="duration">0:00</span>
+      <select id="scores" aria-label="Bundled scores"></select>
+      <label id="open" title="Open a MusicXML (.musicxml, .xml, .mxl) file">
+        Open score…
+        <input id="file" type="file" accept=".musicxml,.xml,.mxl" hidden />
+      </label>
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

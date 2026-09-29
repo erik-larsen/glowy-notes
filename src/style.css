@@ -1,0 +1,119 @@
+:root {
+  color-scheme: dark;
+  --fg: #e8e3dc;
+  --muted: #9a938a;
+  --panel: rgba(18, 16, 15, 0.72);
+  --accent: #ffae5c;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: #000;
+  color: var(--fg);
+  font: 14px/1.4 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overflow: hidden;
+}
+
+#stage {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Verovio SVG is laid out here (invisible) so note positions can be measured. */
+#measure-host {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+#overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 400ms ease;
+}
+#overlay.visible { opacity: 1; }
+#overlay.dragging { opacity: 1; background: rgba(255, 174, 92, 0.08); outline: 2px dashed var(--accent); outline-offset: -16px; }
+#overlay-text {
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--fg);
+}
+
+#hud {
+  position: fixed;
+  left: 16px;
+  right: 16px;
+  bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  backdrop-filter: blur(8px);
+  font-variant-numeric: tabular-nums;
+  opacity: 0.35;
+  transition: opacity 300ms ease;
+}
+#hud:hover, #hud:focus-within, body.paused #hud { opacity: 1; }
+
+#play {
+  width: 36px;
+  height: 36px;
+  flex: none;
+  border: 0;
+  border-radius: 50%;
+  background: var(--fg);
+  color: #111;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+#play:disabled { opacity: 0.4; cursor: default; }
+#play svg { width: 18px; height: 18px; fill: currentColor; }
+#play .icon-pause { display: none; }
+body.playing #play .icon-play { display: none; }
+body.playing #play .icon-pause { display: block; }
+
+#scrub { flex: 1; min-width: 60px; accent-color: var(--accent); }
+#time, #duration { color: var(--muted); }
+
+#scores {
+  max-width: 30%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: var(--fg);
+  font: inherit;
+}
+
+#open {
+  flex: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+#open:hover { border-color: var(--accent); }
+
+@media (max-width: 600px) {
+  #duration { display: none; }
+  #hud { left: 8px; right: 8px; bottom: 8px; gap: 8px; }
+}
