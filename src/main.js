@@ -187,4 +187,7 @@ requestAnimationFrame(frame);
 
 const audioReady = player.init();
 syncPlayState();
-await loadBundled(new URLSearchParams(location.search).get('score'));
+const params = new URLSearchParams(location.search);
+await loadBundled(params.get('score'));
+// ?t=<seconds> opens the piece paused at that point (handy for links and screenshots).
+if (params.has('t')) player.seek(Number(params.get('t')) * 1000);
