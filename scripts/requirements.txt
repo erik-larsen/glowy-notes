@@ -1,0 +1,6 @@
+# Score-to-recording alignment (scripts/align.py)
+librosa>=0.10
+numpy
+# Last numba/llvmlite releases with prebuilt macOS x86_64 wheels
+numba==0.60.0
+llvmlite==0.43.0

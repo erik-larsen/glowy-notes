@@ -1,3 +1,8 @@
 node_modules
 dist
 .DS_Store
+
+# Reference videos (local only)
+*.mp4
+public/media/
+.venv/
