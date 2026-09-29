@@ -1,7 +1,8 @@
 import { engrave } from './engrave.js';
 import { layoutScore } from './layout.js';
-import { Player } from './audio.js';
+import { Player, PREROLL_MS } from './audio.js';
 import { Stage } from './scene.js';
+import { createWarp } from './warp.js';
 
 const SCORES = [
   { id: 'canon-in-d', name: 'Canon in D' },
@@ -17,6 +18,7 @@ const ui = {
   time: $('time'),
   duration: $('duration'),
   scores: $('scores'),
+  sound: $('sound'),
   file: $('file'),
   measureHost: $('measure-host'),
 };
@@ -26,6 +28,7 @@ const player = new Player();
 if (import.meta.env.DEV) Object.assign(window, { stage, player });
 let durationMs = 0;
 let scrubbing = false;
+let current = null; // { score, recording } for the loaded piece
 
 function showMessage(text) {
   ui.overlayText.textContent = text;
@@ -43,7 +46,29 @@ function syncPlayState() {
   ui.play.setAttribute('aria-label', player.playing ? 'Pause' : 'Play');
 }
 
-async function loadScore(data, name) {
+/** Loads the audio for the current piece: the aligned recording if chosen, else the piano. */
+async function loadAudio() {
+  player.stop();
+  syncPlayState();
+  const useRecording = current.recording && ui.sound.value === 'recording';
+  await player.load(current.score.midi, useRecording ? current.recording : null);
+  durationMs = Math.max(current.score.durationMs, player.durationSec * 1000);
+  ui.duration.textContent = fmt(durationMs);
+}
+
+/** Looks for public/media/<id>.align.json (from scripts/align.py) next to a bundled score. */
+async function findRecording(id) {
+  try {
+    const res = await fetch(`/media/${id}.align.json`);
+    if (!res.ok || !res.headers.get('content-type')?.includes('json')) return null;
+    const align = await res.json();
+    return { url: `/media/${align.audio}`, warp: createWarp(align.points) };
+  } catch {
+    return null;
+  }
+}
+
+async function loadScore(data, name, recording = null) {
   player.stop();
   syncPlayState();
   ui.play.disabled = ui.scrub.disabled = true;
@@ -53,9 +78,10 @@ async function loadScore(data, name) {
     const layout = await layoutScore(score.svg, ui.measureHost, stage.maxTextureSize);
     stage.setScore(layout, score);
     await audioReady;
-    player.load(score.midi);
-    durationMs = Math.max(score.durationMs, player.durationSec * 1000);
-    ui.duration.textContent = fmt(durationMs);
+    current = { score, recording };
+    ui.sound.hidden = !recording;
+    showMessage(recording ? 'Loading recording…' : '');
+    await loadAudio();
     ui.play.disabled = ui.scrub.disabled = false;
     showMessage('');
   } catch (err) {
@@ -67,8 +93,8 @@ async function loadScore(data, name) {
 async function loadBundled(id) {
   const entry = SCORES.find((s) => s.id === id) ?? SCORES[0];
   ui.scores.value = entry.id;
-  const res = await fetch(`/scores/${entry.id}.musicxml`);
-  await loadScore(await res.text(), entry.name);
+  const [res, recording] = await Promise.all([fetch(`/scores/${entry.id}.musicxml`), findRecording(entry.id)]);
+  await loadScore(await res.text(), entry.name, recording);
 }
 
 async function loadFile(file) {
@@ -88,7 +114,7 @@ async function togglePlay() {
 }
 
 function seekBy(deltaMs) {
-  player.seek(Math.min(durationMs, Math.max(0, player.timeMs + deltaMs)));
+  player.seek(Math.min(durationMs, Math.max(-PREROLL_MS, player.timeMs + deltaMs)));
 }
 
 // --- UI wiring -------------------------------------------------------------
@@ -104,6 +130,13 @@ ui.scores.addEventListener('change', () => {
   if (ui.scores.value !== 'file') loadBundled(ui.scores.value);
   ui.scores.blur();
 });
+ui.sound.addEventListener('change', async () => {
+  ui.sound.blur();
+  if (!current) return;
+  ui.play.disabled = true;
+  await loadAudio();
+  ui.play.disabled = false;
+});
 ui.file.addEventListener('change', () => ui.file.files[0] && loadFile(ui.file.files[0]));
 player.onEnded = syncPlayState;
 
@@ -118,7 +151,7 @@ window.addEventListener('keydown', (e) => {
   } else if (e.code === 'ArrowRight') {
     seekBy(5000);
   } else if (e.code === 'Home') {
-    player.seek(0);
+    player.seek(-PREROLL_MS); // back to before the fly-in
   }
 });
 
@@ -136,14 +169,12 @@ window.addEventListener('drop', (e) => {
 
 // --- Render loop: the audio clock drives everything --------------------------
 
-let prevT = 0;
 let lastFrame = performance.now();
 function frame(now) {
   const dt = Math.min(0.1, (now - lastFrame) / 1000);
   lastFrame = now;
   const t = player.timeMs;
-  stage.render(t, prevT, dt, now / 1000);
-  prevT = t;
+  stage.render(t, dt, now / 1000);
 
   ui.time.textContent = fmt(t);
   if (!scrubbing && durationMs) ui.scrub.value = String(Math.min(1, t / durationMs));

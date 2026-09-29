@@ -8,6 +8,7 @@ import { ShaderPass } from 'three/addons/postprocessing/ShaderPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { createPaperTextures } from './paper.js';
 import { Glow } from './glow.js';
+import { Balls } from './balls.js';
 import { CameraRig } from './camera.js';
 
 const WORLD_PER_PX = 1 / 300; // raster pixels -> world units
@@ -44,6 +45,7 @@ export class Stage {
 
     this.camera = new THREE.PerspectiveCamera(40, 1, 0.05, 200);
     this.rig = new CameraRig(this.camera);
+    this.rig.attachControls(canvas);
 
     this.scene.add(new THREE.HemisphereLight(0x9aa0b0, 0x000000, 0.12));
     this.spot = new THREE.SpotLight(0xfff1e0, 1.4, 0, 0.6, 1, 0);
@@ -67,6 +69,7 @@ export class Stage {
     this.scoreGroup = new THREE.Group();
     this.scene.add(this.scoreGroup);
     this.glow = null;
+    this.balls = null;
 
     const target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
     this.composer = new EffectComposer(this.renderer, target);
@@ -135,10 +138,12 @@ export class Stage {
     for (const [id, timing] of score.notes) {
       const pos = layout.notes.get(id);
       if (!pos) continue;
-      notes.push({ id, ...timing, x: toX(pos.x), z: toZ(pos.y), w: pos.w * k, d: pos.h * k, staff: pos.staff });
+      notes.push({ id, ...timing, x: toX(pos.x), z: toZ(pos.y), w: pos.w * k, d: pos.h * k, staff: pos.staff, layer: pos.layer });
     }
     this.glow = new Glow(notes);
     this.scoreGroup.add(this.glow.group);
+    this.balls = new Balls(notes);
+    this.scoreGroup.add(this.balls.group);
 
     // Playhead path: leftmost onset x at each timemap event, kept monotonic.
     const keyframes = [];
@@ -158,7 +163,9 @@ export class Stage {
 
   _clearScore() {
     this.glow?.dispose();
+    this.balls?.dispose();
     this.glow = null;
+    this.balls = null;
     for (const child of [...this.scoreGroup.children]) {
       this.scoreGroup.remove(child);
       child.geometry?.dispose();
@@ -169,14 +176,14 @@ export class Stage {
 
   /**
    * @param {number} t score time (ms), from the audio clock
-   * @param {number} prevT score time on the previous frame
    * @param {number} dt frame delta (s)
    * @param {number} elapsed wall-clock seconds
    */
-  render(t, prevT, dt, elapsed) {
+  render(t, dt, elapsed) {
     if (this.glow) {
       this.rig.update(t, dt, elapsed);
-      this.glow.update(t, prevT, dt);
+      this.glow.update(t);
+      this.balls.update(t);
       const f = this.rig.focus;
       const s = this.worldH;
       this.spot.position.set(f.x - 0.1 * s, 1.6 * s, f.z + 0.5 * s);

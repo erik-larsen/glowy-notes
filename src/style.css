@@ -94,7 +94,7 @@ body.playing #play .icon-pause { display: block; }
 #scrub { flex: 1; min-width: 60px; accent-color: var(--accent); }
 #time, #duration { color: var(--muted); }
 
-#scores {
+#scores, #sound {
   max-width: 30%;
   padding: 6px 8px;
   border-radius: 8px;
@@ -117,3 +117,5 @@ body.playing #play .icon-pause { display: block; }
   #duration { display: none; }
   #hud { left: 8px; right: 8px; bottom: 8px; gap: 8px; }
 }
+
+#sound[hidden] { display: none; }

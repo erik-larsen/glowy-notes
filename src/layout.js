@@ -28,7 +28,7 @@ export async function layoutScore(svgText, host, maxTileWidth) {
   return { width, height, notes, tiles };
 }
 
-/** Returns Map<noteId, {x, y, w, h, staff}> in raster pixels (notehead centre + size). */
+/** Returns Map<noteId, {x, y, w, h, staff, layer}> in raster pixels (notehead centre + size). */
 function measureNotes(svg, host, width, height) {
   host.innerHTML = svg;
   const root = host.querySelector('svg');
@@ -46,6 +46,7 @@ function measureNotes(svg, host, width, height) {
       w: r.width * sx,
       h: r.height * sy,
       staff: parseInt(el.closest('g.staff')?.dataset.n ?? '1', 10),
+      layer: parseInt(el.closest('g.layer')?.dataset.n ?? '1', 10),
     });
   }
   host.innerHTML = '';

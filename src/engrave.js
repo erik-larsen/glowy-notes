@@ -30,8 +30,8 @@ export async function engrave(data) {
     scale: 100,
     pageMarginLeft: 150,
     pageMarginRight: 150,
-    // Tag each staff with its @n so notes can be coloured by staff.
-    svgAdditionalAttribute: ['staff@n'],
+    // Tag staves and layers with their @n so each voice gets its own colour and ball.
+    svgAdditionalAttribute: ['staff@n', 'layer@n'],
   });
 
   let ok;
