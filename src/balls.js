@@ -1,7 +1,7 @@
 // One glowing ball per voice that hops from note to note, landing on each note exactly at
 // its onset (which is when the note lights up). All balls share one horizontal position that
 // follows the playhead, so they stay level with each other: a voice with longer notes makes
-// taller, slower arcs spanning the whole gap. Each ball carries a small point light so it
+// slower arcs spanning the whole gap, all peaking at the same height. Each ball carries a small point light so it
 // tints the paper and catches the ink around it. A ball is only on stage while its voice is
 // playing: each phrase (notes separated by less than PHRASE_REST_MS of silence) starts with
 // the ball swooping in and ends with it flying off.
@@ -9,10 +9,9 @@ import * as THREE from 'three';
 import { voiceColor } from './glow.js';
 import { PREROLL_MS } from './audio.js';
 
-// Arc height (in staff spaces) grows with the time between landings, capped for long rests.
-const HEIGHT_BASE = 0.2;
-const HEIGHT_PER_MS = 1 / 450;
-const HEIGHT_MAX = 5;
+// Every hop peaks at the same height (in staff spaces), whatever the gap, as in the reference
+// video: a long note is a slow, low glide rather than a tall arc.
+const ARC_HEIGHT = 1.2;
 // Fly-in during the pre-roll: start this many staff spaces left of / above / in front of the entry point.
 const FLY_FROM = { x: -30, y: 8, z: 12 };
 // Mid-piece entries and exits move level with the playhead, dropping from / rising to this offset.
@@ -120,10 +119,6 @@ export class Balls {
     }
   }
 
-  /** Peak height of an arc spanning `gapMs` between landings. */
-  arcHeight(gapMs) {
-    return this.unit * Math.min(HEIGHT_MAX, HEIGHT_BASE + gapMs * HEIGHT_PER_MS);
-  }
 
   playheadX(t) {
     const p = this.playhead;
@@ -192,7 +187,7 @@ export class Balls {
           const u = (t - a.t) / gap;
           x = this.playheadX(t) + a.dx + (b.dx - a.dx) * u;
           z = a.z + (b.z - a.z) * u;
-          y = r + 4 * this.arcHeight(gap) * u * (1 - u);
+          y = r + 4 * ARC_HEIGHT * u2 * u * (1 - u);
         } else if (t > phrase.exitAt) {
           const u = Math.min(1, (t - phrase.exitAt) / EXIT_MS);
           x = a.x - EXIT_DRIFT * u2 * easeIn(u);
@@ -204,7 +199,7 @@ export class Balls {
       const flat = 1 - 0.4 * squash; // squash on landing, bulge sideways
       v.mesh.visible = true;
       v.halo.visible = true;
-      v.mesh.position.set(x, y * (1 - 0.35 * squash), z);
+      v.mesh.position.set(x, y - 0.35 * squash * r, z); // dip into the landing without lowering the arc
       v.mesh.scale.set(fade / Math.sqrt(flat), fade * flat, fade / Math.sqrt(flat));
       v.halo.position.copy(v.mesh.position);
       v.halo.scale.setScalar(this.radius * HALO_SCALE * fade);
