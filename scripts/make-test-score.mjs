@@ -53,6 +53,10 @@ const PIECES = [
       'G4:4 B4:8 A4:8 G4:4 F#4:8 E4:8', 'F#4:8 E4:8 D4:8 E4:8 F#4:8 G4:8 A4:8 B4:8',
       'G4:4 B4:8 A4:8 B4:4 C#5:8 D5:8', 'A4:8 B4:8 C#5:8 D5:8 E5:8 F#5:8 G5:8 A5:8',
     ];
+    const scalar = [
+      'D5:8 C#5:8 D5:8 D4:8 C#4:8 A4:8 E4:8 F#4:8', 'D4:8 D5:8 C#5:8 B4:8 C#5:8 F#5:8 A5:8 B5:8',
+      'G5:8 F#5:8 E5:8 G5:8 F#5:8 E5:8 D5:8 C#5:8', 'B4:8 A4:8 G4:8 F#4:8 E4:8 G4:8 F#4:8 E4:8',
+    ];
     // Simple figurations over the ground
     const repeated = ['F#5:4 F#5:4 E5:4 E5:4', 'D5:4 D5:4 C#5:4 C#5:4', 'B4:4 B4:4 A4:4 A4:4', 'B4:4 B4:4 C#5:4 C#5:4'];
     const dotted = [
@@ -77,9 +81,11 @@ const PIECES = [
       time: [4, 4],
       beamBeats: 2,
       treble: [
-        ...entry, ...second, ...broken, ...running, // passes 0-4
-        ...broken, ...repeated, ...dotted, // 5-7
-        ...running, ...arpUp, // 8-10
+        // Where the recording clearly plays one of Pachelbel's lines (scored against the audio),
+        // that line is used; elsewhere a line with the same rhythm stands in.
+        ...entry, ...second, ...scalar, ...running, // passes 0-4
+        ...broken, broken[0], broken[1], repeated[2], repeated[3], ...dotted, // 5-7
+        running[0], running[1], broken[2], broken[3], ...running.slice(4), ...arpUp, // 8-10
         'A4:4 C#5:4 E5:4 G5:4', 'A5:2 G5:2', // cadence (the recording slows down here)
         'D5+F#5+A5+D6:1',
       ],
