@@ -35,7 +35,8 @@ export class Balls {
     this.group = new THREE.Group();
     const heads = notes.map((n) => n.d).sort((a, b) => a - b);
     this.unit = heads[heads.length >> 1] || 0.15; // ~ one staff space (notehead height)
-    this.radius = this.unit * 0.28;
+    // Visible size (core plus its thin bloom halo) about half a notehead wide, as in the reference video.
+    this.radius = this.unit * 0.22;
 
     // Group notes into voices, then one landing per distinct onset: the top note of a chord.
     const voices = new Map();
@@ -59,7 +60,7 @@ export class Balls {
       const color = voiceColor(v.staff, v.layer);
       const mesh = new THREE.Mesh(
         geometry,
-        new THREE.MeshBasicMaterial({ color: color.clone().lerp(new THREE.Color(1, 1, 1), 0.2).multiplyScalar(3) }),
+        new THREE.MeshBasicMaterial({ color: color.clone().lerp(new THREE.Color(1, 1, 1), 0.15).multiplyScalar(1.6) }),
       );
       const light = new THREE.PointLight(color, 0, this.unit * 7, 2);
       this.group.add(mesh, light);
