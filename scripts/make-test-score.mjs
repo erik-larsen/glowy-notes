@@ -26,38 +26,68 @@ const PIECES = [
     ],
   },
   (() => {
-    // Pachelbel's ground: D A Bm F#m | G D G A, one chord per beat.
-    const groundQ = ['D3:4 A2:4 B2:4 F#2:4', 'G2:4 D2:4 G2:4 A2:4'];
-    const groundFifths = ['D3+A3:4 A2+E3:4 B2+F#3:4 F#2+C#3:4', 'G2+D3:4 D2+A2:4 G2+D3:4 A2+E3:4'];
-    const groundEighths = ['D3:8 A3:8 A2:8 E3:8 B2:8 F#3:8 F#2:8 C#3:8', 'G2:8 D3:8 D2:8 A2:8 G2:8 D3:8 A2:8 E3:8'];
+    // Pachelbel's ground in the common piano arrangement: note values doubled, so the
+    // eight chords D A Bm F#m G D G A take four bars, two chords per bar. The layout of
+    // variations (11 passes of the ground, then a final chord) follows the rhythm of the
+    // reference recording so the score can be aligned to it (scripts/align.py).
+    const chords = ['D', 'A', 'Bm', 'Fsm', 'G', 'D', 'G', 'A'];
+    // Left hand, per chord: eighth-note arpeggios, later doubled into sixteenths.
+    const arp8 = {
+      D: 'D3:8 A3:8 D4:8 F#4:8', A: 'A2:8 E3:8 A3:8 C#4:8', Bm: 'B2:8 F#3:8 B3:8 D4:8',
+      Fsm: 'F#2:8 C#3:8 F#3:8 A3:8', G: 'G2:8 D3:8 G3:8 B3:8',
+    };
+    const arp16 = {
+      D: 'D3:16 A3:16 D4:16 F#4:16 A4:16 F#4:16 D4:16 A3:16', A: 'A2:16 E3:16 A3:16 C#4:16 E4:16 C#4:16 A3:16 E3:16',
+      Bm: 'B2:16 F#3:16 B3:16 D4:16 F#4:16 D4:16 B3:16 F#3:16', Fsm: 'F#2:16 C#3:16 F#3:16 A3:16 C#4:16 A3:16 F#3:16 C#3:16',
+      G: 'G2:16 D3:16 G3:16 B3:16 D4:16 B3:16 G3:16 D3:16',
+    };
+    const ground = (arp) => [0, 2, 4, 6].map((i) => `${arp[chords[i]]} ${arp[chords[i + 1]]}`);
+
+    // Pachelbel's own lines
+    const entry = ['F#5:2 E5:2', 'D5:2 C#5:2', 'B4:2 A4:2', 'B4:2 C#5:2'];
+    const second = ['D5:2 C#5:2', 'B4:2 A4:2', 'G4:2 F#4:2', 'G4:2 E4:2'];
+    const broken = ['D5:4 F#5:4 A5:4 G5:4', 'F#5:4 D5:4 F#5:4 E5:4', 'D5:4 B4:4 D5:4 A5:4', 'G5:4 B5:4 A5:4 G5:4'];
+    const running = [
+      'F#5:4 D5:8 E5:8 F#5:4 D5:8 E5:8', 'F#5:8 A4:8 B4:8 C#5:8 D5:8 E5:8 F#5:8 G5:8',
+      'F#5:4 D5:8 E5:8 F#5:4 F#4:8 G4:8', 'A4:8 B4:8 A4:8 G4:8 A4:8 F#4:8 G4:8 A4:8',
+      'G4:4 B4:8 A4:8 G4:4 F#4:8 E4:8', 'F#4:8 E4:8 D4:8 E4:8 F#4:8 G4:8 A4:8 B4:8',
+      'G4:4 B4:8 A4:8 B4:4 C#5:8 D5:8', 'A4:8 B4:8 C#5:8 D5:8 E5:8 F#5:8 G5:8 A5:8',
+    ];
+    // Simple figurations over the ground
+    const repeated = ['F#5:4 F#5:4 E5:4 E5:4', 'D5:4 D5:4 C#5:4 C#5:4', 'B4:4 B4:4 A4:4 A4:4', 'B4:4 B4:4 C#5:4 C#5:4'];
+    const dotted = [
+      'D5:4 F#5:8 E5:8 D5:4 C#5:8 E5:8', 'B4:4 D5:8 C#5:8 B4:4 A4:8 C#5:8',
+      'B4:4 D5:8 C#5:8 A4:4 F#4:8 A4:8', 'B4:4 D5:8 C#5:8 C#5:4 E5:8 A5:8',
+    ];
+    const arpUp = [
+      'D5:8 F#5:8 A5:8 D6:8 C#5:8 E5:8 A5:8 C#6:8', 'B4:8 D5:8 F#5:8 B5:8 A4:8 C#5:8 F#5:8 A5:8',
+      'B4:8 D5:8 G5:8 B5:8 A4:8 D5:8 F#5:8 A5:8', 'B4:8 D5:8 G5:8 B5:8 C#5:8 E5:8 A5:8 C#6:8',
+    ];
+    // Inner treble voice (drawn as a second layer, so it gets its own ball)
+    const inner = ['F#4:2 E4:2', 'D4:2 C#4:2', 'B3:2 A3:2', 'B3:2 C#4:2'];
+    const pedal = ['A4:2 A4:2', 'F#4:2 F#4:2', 'D4:2 D4:2', 'D4:2 E4:2'];
+    const none = [null, null, null, null];
+
     return {
       file: 'canon-in-d.musicxml',
       title: 'Canon in D',
-      composer: 'after J. Pachelbel (piano reduction)',
-      tempo: 66,
+      composer: 'J. Pachelbel (piano arrangement)',
+      tempo: 65,
       fifths: 2,
       time: [4, 4],
-      beamBeats: 2, // eighths beam in half bars
+      beamBeats: 2,
       treble: [
-        'R:1', 'R:1',
-        // Violin I entry, doubled in thirds
-        'D5+F#5:4 C#5+E5:4 B4+D5:4 A4+C#5:4', 'G4+B4:4 F#4+A4:4 G4+B4:4 A4+C#5:4',
-        'D5+F#5:4 C#5+E5:4 B4+D5:4 A4+C#5:4', 'G4+B4:4 F#4+A4:4 G4+B4:4 E4+C#5:4',
-        // Eighth-note variation
-        'D5:8 F#5:8 A5:8 G5:8 F#5:8 D5:8 F#5:8 E5:8', 'D5:8 B4:8 D5:8 A5:8 G5:8 B5:8 A5:8 G5:8',
-        // Sixteenth-note variation
-        'F#5:8 D5:16 E5:16 F#5:8 D5:16 E5:16 F#5:16 A4:16 B4:16 C#5:16 D5:16 E5:16 F#5:16 G5:16',
-        'D5:8 B4:16 C#5:16 D5:8 D4:16 E4:16 F#4:16 G4:16 F#4:16 E4:16 F#4:16 D5:16 C#5:16 D5:16',
-        // Chorale
-        'D5+F#5+A5:4 C#5+E5+A5:4 B4+D5+F#5:4 A4+C#5+F#5:4', 'B4+D5+G5:4 A4+D5+F#5:4 B4+D5+G5:4 C#5+E5+A5:4',
-        // Entry again, an octave up
-        'F#6:4 E6:4 D6:4 C#6:4', 'B5:4 A5:4 B5:4 C#6:4',
-        'D6:8 F#6:8 A6:8 G6:8 F#6:8 D6:8 F#6:8 E6:8', 'D6:8 B5:8 D6:8 A6:8 G6:8 B6:8 A6:8 G6:8',
+        ...entry, ...second, ...broken, ...running, // passes 0-4
+        ...broken, ...repeated, ...dotted, // 5-7
+        ...running, ...arpUp, // 8-10
+        'A4:4 C#5:4 E5:4 G5:4', 'A5:2 G5:2', // cadence (the recording slows down here)
         'D5+F#5+A5+D6:1',
       ],
+      treble2: [...none, ...none, ...none, ...none, ...none, ...inner, ...pedal, ...none, ...none, ...none, ...none, null, null, null],
       bass: [
-        ...groundQ, ...groundFifths, ...groundFifths,
-        ...groundEighths, ...groundEighths, ...groundEighths, ...groundEighths, ...groundEighths,
+        ...Array.from({ length: 6 }, () => ground(arp8)).flat(),
+        ...Array.from({ length: 5 }, () => ground(arp16)).flat(),
+        'A1+A2:1', 'A1+A2:1',
         'D2+D3:1',
       ],
     };
@@ -156,11 +186,15 @@ function pieceXml(piece) {
   const [beats, beatType] = piece.time;
   const barLength = (beats * 4 * DIVISIONS) / beatType;
   if (piece.treble.length !== piece.bass.length) throw new Error(`${piece.title}: staves differ in length`);
+  if (piece.treble2 && piece.treble2.length !== piece.treble.length) throw new Error(`${piece.title}: treble2 length differs`);
   let measures = '';
   for (let m = 0; m < piece.treble.length; m++) {
     const rh = measureXml(piece.treble[m], 1, 1, piece.beamBeats);
-    const lh = measureXml(piece.bass[m], 2, 2, piece.beamBeats);
-    if (rh.total !== barLength || lh.total !== barLength) throw new Error(`${piece.title}: measure ${m + 1} has wrong length`);
+    const rh2 = piece.treble2?.[m] ? measureXml(piece.treble2[m], 1, 2, piece.beamBeats) : null;
+    const lh = measureXml(piece.bass[m], 2, 5, piece.beamBeats);
+    if (rh.total !== barLength || lh.total !== barLength || (rh2 && rh2.total !== barLength)) {
+      throw new Error(`${piece.title}: measure ${m + 1} has wrong length`);
+    }
     let attrs = '';
     let direction = '';
     if (m === 0) {
@@ -173,7 +207,7 @@ function pieceXml(piece) {
         `<direction placement="below"><direction-type><dynamics><mf/></dynamics></direction-type><staff>1</staff></direction>`;
     }
     const barline = m === piece.treble.length - 1 ? '<barline location="right"><bar-style>light-heavy</bar-style></barline>' : '';
-    measures += `<measure number="${m + 1}">${attrs}${direction}${rh.xml}<backup><duration>${barLength}</duration></backup>${lh.xml}${barline}</measure>\n`;
+    measures += `<measure number="${m + 1}">${attrs}${direction}${rh.xml}${rh2 ? `<backup><duration>${barLength}</duration></backup>${rh2.xml}` : ''}<backup><duration>${barLength}</duration></backup>${lh.xml}${barline}</measure>\n`;
   }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
