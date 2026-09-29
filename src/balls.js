@@ -18,10 +18,16 @@ const FLY_FROM = { x: -30, y: 8, z: 12 };
 // Mid-piece entries and exits move level with the playhead, dropping from / rising to this offset.
 const SWOOP = { y: 16, z: 10 };
 const ENTER_MS = 1500;
-const EXIT_MS = 1200;
+const EXIT_MS = 2600;
+// Exit: lift slowly off the last note, staying with the page (so it scrolls away right to
+// left with the notes) and drifting a little further left, fading out near the end.
+const EXIT_RISE = 7; // staff spaces
+const EXIT_DRIFT = 3; // staff spaces, toward the start of the score
 const LINGER_MS = 400; // stay on a phrase's last note at least this long
 const PHRASE_REST_MS = 3000; // silence that ends a phrase
 const SQUASH_MS = 90;
+const HALO_SCALE = 5.5; // halo sprite diameter, in ball radii
+const HALO_GAIN = 1.4; // halo brightness (additive, below the bloom threshold so its size is exact)
 
 const smoothstep = (u) => u * u * (3 - 2 * u);
 const easeIn = (u) => u ** 3;
@@ -46,6 +52,7 @@ export class Balls {
       voices.get(key).notes.push(n);
     }
     const geometry = new THREE.SphereGeometry(this.radius, 20, 14);
+    this.haloTexture = haloTexture();
     this.voices = [...voices.values()].map((v) => {
       v.notes.sort((a, b) => a.on - b.on || a.z - b.z);
       const landings = [];
@@ -60,17 +67,30 @@ export class Balls {
       const color = voiceColor(v.staff, v.layer);
       const mesh = new THREE.Mesh(
         geometry,
-        new THREE.MeshBasicMaterial({ color: color.clone().lerp(new THREE.Color(1, 1, 1), 0.15).multiplyScalar(1.6) }),
+        // Hot, near-white core that just clears the bloom threshold for a faint rim.
+        new THREE.MeshBasicMaterial({ color: color.clone().lerp(new THREE.Color(1, 1, 1), 0.45).multiplyScalar(2) }),
       );
       const light = new THREE.PointLight(color, 0, this.unit * 7, 2);
-      this.group.add(mesh, light);
+      // Soft glow in the voice colour, sized directly rather than left to the bloom pass.
+      const halo = new THREE.Sprite(
+        new THREE.SpriteMaterial({
+          map: this.haloTexture,
+          color: color.clone().multiplyScalar(HALO_GAIN),
+          blending: THREE.AdditiveBlending,
+          transparent: true,
+          depthWrite: false,
+        }),
+      );
+      halo.scale.setScalar(this.radius * HALO_SCALE);
+      halo.renderOrder = 3;
+      this.group.add(mesh, halo, light);
       // Phrases: runs of landings without a long silence between one note's end and the next.
       const phrases = [{ first: 0, last: 0 }];
       for (let i = 1; i < landings.length; i++) {
         if (landings[i].t - landings[i - 1].end > PHRASE_REST_MS) phrases.push({ first: i, last: i });
         else phrases[phrases.length - 1].last = i;
       }
-      return { landings, phrases, mesh, light };
+      return { landings, phrases, mesh, halo, light };
     });
 
     // Shared playhead: at every onset of any voice, the mean x of the notes landing then.
@@ -130,6 +150,7 @@ export class Balls {
       }
       if (!phrase || t > phrase.exitAt + EXIT_MS) {
         v.mesh.visible = false;
+        v.halo.visible = false;
         v.light.intensity = 0;
         continue;
       }
@@ -139,6 +160,7 @@ export class Balls {
       let y = r;
       let z;
       let squash = 0;
+      let fade = 1;
 
       if (t < first.t) {
         // Keep moving the whole way: glide across while falling faster and faster, so the
@@ -172,24 +194,27 @@ export class Balls {
           z = a.z + (b.z - a.z) * u;
           y = r + 4 * this.arcHeight(gap) * u * (1 - u);
         } else if (t > phrase.exitAt) {
-          // Phrase over: rise away, drifting back level with the playhead.
-          const e = easeIn(Math.min(1, (t - phrase.exitAt) / EXIT_MS));
-          x = a.x + (this.playheadX(t) + a.dx - a.x) * e;
-          y = r + SWOOP.y * u2 * e;
-          z = a.z + SWOOP.z * u2 * e;
+          const u = Math.min(1, (t - phrase.exitAt) / EXIT_MS);
+          x = a.x - EXIT_DRIFT * u2 * easeIn(u);
+          y = r + EXIT_RISE * u2 * smoothstep(u);
+          fade = 1 - smoothstep(Math.max(0, (u - 0.55) / 0.45));
         }
       }
 
       const flat = 1 - 0.4 * squash; // squash on landing, bulge sideways
       v.mesh.visible = true;
+      v.halo.visible = true;
       v.mesh.position.set(x, y * (1 - 0.35 * squash), z);
-      v.mesh.scale.set(1 / Math.sqrt(flat), flat, 1 / Math.sqrt(flat));
+      v.mesh.scale.set(fade / Math.sqrt(flat), fade * flat, fade / Math.sqrt(flat));
+      v.halo.position.copy(v.mesh.position);
+      v.halo.scale.setScalar(this.radius * HALO_SCALE * fade);
       v.light.position.set(x, y + r, z);
-      v.light.intensity = u2 * u2 * (5 + 8 * squash);
+      v.light.intensity = fade * u2 * u2 * (5 + 8 * squash);
     }
   }
 
   dispose() {
+    this.haloTexture.dispose();
     this.group.traverse((o) => {
       o.geometry?.dispose();
       o.material?.dispose();
@@ -206,4 +231,22 @@ function lastLandingAtOrBefore(l, t) {
     else hi = mid - 1;
   }
   return lo;
+}
+
+/** Soft radial falloff for the ball halo. */
+function haloTexture() {
+  const size = 128;
+  const canvas = document.createElement('canvas');
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  const g = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 2);
+  g.addColorStop(0, 'rgba(255,255,255,1)');
+  g.addColorStop(0.2, 'rgba(255,255,255,0.55)');
+  g.addColorStop(0.45, 'rgba(255,255,255,0.15)');
+  g.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, size, size);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.NoColorSpace;
+  return tex;
 }
