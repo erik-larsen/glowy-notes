@@ -2,8 +2,8 @@ node_modules
 dist
 .DS_Store
 
-# Reference videos (local only)
+# Reference videos and audio extracted from them: local only, never published
 *.mp4
-public/media/
+local-media/
 .venv/
 vendor/

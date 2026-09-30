@@ -4,6 +4,9 @@ import { Player, PREROLL_MS } from './audio.js';
 import { Stage } from './scene.js';
 import { createWarp } from './warp.js';
 
+// Site base path ('/' in dev, './' in the build) so the app also works from a subpath like GitHub Pages.
+const BASE = import.meta.env.BASE_URL;
+
 const SCORES = [
   { id: 'canon-in-d', name: 'Canon in D' },
   { id: 'minuet-in-g', name: 'Minuet in G' },
@@ -59,10 +62,10 @@ async function loadAudio() {
 /** Looks for public/media/<id>.align.json (from scripts/align.py) next to a bundled score. */
 async function findRecording(id) {
   try {
-    const res = await fetch(`/media/${id}.align.json`);
+    const res = await fetch(`${BASE}media/${id}.align.json`);
     if (!res.ok || !res.headers.get('content-type')?.includes('json')) return null;
     const align = await res.json();
-    return { url: `/media/${align.audio}`, warp: createWarp(align.points), label: align.label ?? 'Recording' };
+    return { url: `${BASE}media/${align.audio}`, warp: createWarp(align.points), label: align.label ?? 'Recording' };
   } catch {
     return null;
   }
@@ -94,7 +97,7 @@ async function loadScore(data, name, recording = null) {
 async function loadBundled(id) {
   const entry = SCORES.find((s) => s.id === id) ?? SCORES[0];
   ui.scores.value = entry.id;
-  const [res, recording] = await Promise.all([fetch(`/scores/${entry.id}.musicxml`), findRecording(entry.id)]);
+  const [res, recording] = await Promise.all([fetch(`${BASE}scores/${entry.id}.musicxml`), findRecording(entry.id)]);
   await loadScore(await res.text(), entry.name, recording);
 }
 
