@@ -4,7 +4,7 @@
 // slower arcs spanning the whole gap, all peaking at the same height. Each ball carries a small point light so it
 // tints the paper and catches the ink around it. A ball is only on stage while its voice is
 // playing: each phrase (notes separated by less than PHRASE_REST_MS of silence) starts with
-// the ball swooping in and ends with it flying off.
+// the ball flying in from the left and ends with it lifting away.
 import * as THREE from 'three';
 import { voiceColor } from './glow.js';
 import { PREROLL_MS } from './audio.js';
@@ -12,11 +12,9 @@ import { PREROLL_MS } from './audio.js';
 // Every hop peaks at the same height (in staff spaces), whatever the gap, as in the reference
 // video: a long note is a slow, low glide rather than a tall arc.
 const ARC_HEIGHT = 1.2;
-// Fly-in during the pre-roll: start this many staff spaces left of / above / in front of the entry point.
+// Entrances (the opening one and any mid-piece ones) start this many staff spaces left of / above /
+// in front of where the ball lands.
 const FLY_FROM = { x: -30, y: 8, z: 12 };
-// Mid-piece entries and exits move level with the playhead, dropping from / rising to this offset.
-const SWOOP = { y: 16, z: 10 };
-const ENTER_MS = 1500;
 const EXIT_MS = 2600;
 // Exit: lift slowly off the last note, staying with the page (so it scrolls away right to
 // left with the notes) and drifting a little further left, fading out near the end.
@@ -113,7 +111,7 @@ export class Balls {
         const first = v.landings[p.first];
         const last = v.landings[p.last];
         p.fromPreroll = first.t === t0; // enters during the pre-roll, from off to the left
-        p.enterAt = first.t - (p.fromPreroll ? PREROLL_MS : ENTER_MS);
+        p.enterAt = first.t - PREROLL_MS; // every entrance takes as long as the opening fly-in
         p.exitAt = Math.max(last.end, last.t + LINGER_MS);
       }
     }
@@ -163,17 +161,11 @@ export class Balls {
         const u = Math.min(1, Math.max(0, (t - phrase.enterAt) / (first.t - phrase.enterAt)));
         const glide = smoothstep(u);
         const fall = 1 - u * u;
-        if (phrase.fromPreroll) {
-          // In from off screen to the left while the playhead waits at the start.
-          x = first.x + FLY_FROM.x * u2 * (1 - glide);
-          y = r + FLY_FROM.y * u2 * fall;
-          z = first.z + FLY_FROM.z * u2 * (1 - glide);
-        } else {
-          // Swoop down level with the other balls onto the first note.
-          x = this.playheadX(t) + first.dx * glide;
-          y = r + SWOOP.y * u2 * fall;
-          z = first.z + SWOOP.z * u2 * (1 - glide);
-        }
+        // Every entrance comes in from off screen to the left, like the opening one. Measured
+        // from the playhead (which may already be moving), so it lands exactly on its note.
+        x = this.playheadX(t) + first.dx * glide + FLY_FROM.x * u2 * (1 - glide);
+        y = r + FLY_FROM.y * u2 * fall;
+        z = first.z + FLY_FROM.z * u2 * (1 - glide);
       } else {
         const i = Math.min(lastLandingAtOrBefore(l, t), phrase.last);
         const a = l[i];
