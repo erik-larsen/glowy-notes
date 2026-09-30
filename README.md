@@ -1,4 +1,4 @@
-# Glowy Notes · [live demo](https://erik-larsen.github.io/glowy-notes/)
+# [Glowy Notes](https://erik-larsen.github.io/glowy-notes/)
 
 ![Canon in D playing: glowing balls hop along the staves and light each note as it sounds](docs/screenshot.jpg)
 
