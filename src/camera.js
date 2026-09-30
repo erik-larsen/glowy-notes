@@ -12,6 +12,7 @@ const ZOOM_MAX = 4;
 const POLAR_MIN = 0.12; // keep the camera above the paper and short of straight down
 const POLAR_MAX = 1.45;
 const VIEW_DAMPING = 10; // 1/s, how quickly the view catches up with the mouse
+const DEFAULT_DISTANCE = 1.15; // default framing, relative to the original close-up
 
 export class CameraRig {
   constructor(camera) {
@@ -28,26 +29,52 @@ export class CameraRig {
     this._spherical = new THREE.Spherical();
   }
 
-  /** Left-drag orbits, the wheel zooms, double-click resets. */
+  /**
+   * Left-drag (or one finger) orbits, the wheel (or a two-finger pinch) zooms,
+   * double-click resets.
+   */
   attachControls(element) {
-    let drag = null;
+    const pointers = new Map(); // pointerId -> {x, y}
+    let pinch = null; // distance between two touches at the last move
     element.style.cursor = 'grab';
-    element.style.touchAction = 'none';
+    element.style.touchAction = 'none'; // keep the browser from panning/zooming the page
+    const zoomBy = (factor) => {
+      this.userTarget.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, this.userTarget.zoom * factor));
+    };
+    const spread = () => {
+      const [a, b] = [...pointers.values()];
+      return Math.hypot(a.x - b.x, a.y - b.y);
+    };
+
     element.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0) return;
-      drag = { x: e.clientX, y: e.clientY };
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      pointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
       element.setPointerCapture(e.pointerId);
       element.style.cursor = 'grabbing';
+      if (pointers.size === 2) pinch = spread();
     });
     element.addEventListener('pointermove', (e) => {
-      if (!drag) return;
-      this.userTarget.yaw -= (e.clientX - drag.x) * ORBIT_SPEED;
-      this.userTarget.pitch -= (e.clientY - drag.y) * ORBIT_SPEED;
-      drag = { x: e.clientX, y: e.clientY };
+      const p = pointers.get(e.pointerId);
+      if (!p) return;
+      const dx = e.clientX - p.x;
+      const dy = e.clientY - p.y;
+      p.x = e.clientX;
+      p.y = e.clientY;
+      if (pointers.size >= 2) {
+        // Pinch: fingers apart zooms in, together zooms out.
+        const d = spread();
+        if (pinch && d > 0) zoomBy(pinch / d);
+        pinch = d;
+      } else {
+        this.userTarget.yaw -= dx * ORBIT_SPEED;
+        this.userTarget.pitch -= dy * ORBIT_SPEED;
+      }
     });
-    const end = () => {
-      drag = null;
-      element.style.cursor = 'grab';
+    const end = (e) => {
+      pointers.delete(e.pointerId);
+      // Dropping to one finger continues as an orbit from where that finger is now.
+      pinch = pointers.size === 2 ? spread() : null;
+      if (!pointers.size) element.style.cursor = 'grab';
     };
     element.addEventListener('pointerup', end);
     element.addEventListener('pointercancel', end);
@@ -55,8 +82,7 @@ export class CameraRig {
       'wheel',
       (e) => {
         e.preventDefault();
-        const z = this.userTarget.zoom * Math.exp(e.deltaY * ZOOM_SPEED);
-        this.userTarget.zoom = Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z));
+        zoomBy(Math.exp(e.deltaY * ZOOM_SPEED));
       },
       { passive: false },
     );
@@ -118,7 +144,7 @@ export class CameraRig {
     const sph = this._spherical.setFromVector3(this._offset.subVectors(position, lookAt));
     sph.theta += this.user.yaw;
     sph.phi = Math.min(POLAR_MAX, Math.max(POLAR_MIN, sph.phi + this.user.pitch));
-    sph.radius *= this.user.zoom;
+    sph.radius *= DEFAULT_DISTANCE * this.user.zoom;
     this.camera.position.copy(lookAt).add(this._offset.setFromSpherical(sph));
     this.camera.lookAt(lookAt);
   }
